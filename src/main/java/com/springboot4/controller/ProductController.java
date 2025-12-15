@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/products")
@@ -22,19 +22,27 @@ public class ProductController {
     }
 
     @GetMapping(version = "1")
-    public List<ProductResponseV1> getProductsV1() {
-        // call productService method
-        return productService.getAllProducts()
-                .stream()
-                .map(this::toProductResponseV1)
-                .toList();
+    public List<ProductResponseV1> getProductsV1() throws InterruptedException {
+        try {
+            // call productService method
+            return productService.getAllProducts()
+                    .stream()
+                    .map(this::toProductResponseV1)
+                    .toList();
+        } catch (RuntimeException e) {
+            return fallbackOptionV1(e);
+        }
     }
 
     @GetMapping(version = "2")
-    public ProductResponseV2 getProductsV2() {
-        // call productService method
-        List<Product> products = productService.getAllProducts();
-        return toProductResponseV2(products);
+    public ProductResponseV2 getProductsV2() throws InterruptedException {
+        try {
+            // call productService method
+            List<Product> products = productService.getAllProducts();
+            return toProductResponseV2(products);
+        } catch (RuntimeException e) {
+            return fallbackOptionV2(e);
+        }
     }
 
     private ProductResponseV1 toProductResponseV1(Product product) {
@@ -56,5 +64,21 @@ public class ProductController {
                         p.category()
                 )).toList();
         return new ProductResponseV2(productListV2, products.size());
+    }
+
+    public List<ProductResponseV1> fallbackOptionV1(RuntimeException exception) {
+        // in realtime - fetch from cache or some list
+        System.out.println("Fallback option gets triggered after all retries failed" + exception.getMessage());
+        // cause high severity incident
+        // send email to team and leadership
+        return Collections.emptyList();
+    }
+
+    public ProductResponseV2 fallbackOptionV2(RuntimeException exception) {
+        // in realtime - fetch from cache or some list
+        System.out.println("Fallback option gets triggered after all retries failed" + exception.getMessage());
+        // cause high severity incident
+        // send email to team and leadership
+        return new ProductResponseV2(Collections.emptyList(), 0);
     }
 }
